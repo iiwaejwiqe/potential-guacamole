@@ -32,9 +32,6 @@ echo 'net.ipv4.tcp_timestamps = 1' | sudo tee -a /etc/sysctl.conf
 # Włączanie funkcji TCP window scaling
 echo 'net.ipv4.tcp_window_scaling = 1' | sudo tee -a /etc/sysctl.conf
 
-# Zwiększenie limitu plików otwartych jednocześnie
-echo 'fs.file-max = 1000000' | sudo tee -a /etc/sysctl.conf
-
 # Zwiększenie wielkości pamięci podręcznej dla DNS
 echo 'options single-request-reopen' | sudo tee -a /etc/resolvconf/resolv.conf.d/head
 
@@ -52,7 +49,7 @@ sudo echo "Protocol 2
 Ciphers aes128-ctr,aes192-ctr,aes256-ctr
 MACs hmac-sha2-256,hmac-sha2-512
 PermitRootLogin no
-MaxAuthTries 3
+MaxAuthTries 5
 LoginGraceTime 30
 Banner /etc/issue.net
 AllowUsers yourusername
@@ -60,19 +57,6 @@ PasswordAuthentication no
 UsePAM no
 PubkeyAuthentication yes
 AuthorizedKeysFile	.ssh/authorized_keys" >> /etc/ssh/sshd_config
-
-# Zabezpieczenie przed atakami typu brute-force
-sudo apt-get install -y fail2ban
-sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
-sudo sed -i 's/port = ssh/port = 1337/g' /etc/fail2ban/jail.local
-sudo echo "[sshd]
-enabled  = true
-maxretry = 5
-bantime  = 600
-findtime = 600
-action = iptables-multiport[name=sshd, port="1337", protocol=tcp]
-sendmail-whois[name=sshd, dest=hello@local.localhost, sender=fail2ban@yourserver.com]
-" >> /etc/fail2ban/jail.local
 
 # Włączenie i uruchomienie fail2ban
 sudo systemctl enable fail2ban
@@ -89,3 +73,37 @@ sudo ufw allow 443/udp
 sudo ufw default deny incoming
 sudo ufw default allow outgoing
 sudo ufw enable
+
+# Zmiana DNS-ów serwera
+echo "nameserver 1.1.1.1
+nameserver 8.8.8.8" > /etc/resolv.conf
+
+# Instalacja htop
+sudo apt-get update
+sudo apt-get install -y htop
+
+# Wyczyszczenie cache plików i DNS
+sudo echo 3 > /proc/sys/vm/drop_caches
+sudo service nscd restart
+
+# Optymalizacja serwera
+sudo echo "fs.file-max = 1000000
+fs.nr_open = 1000000
+kernel.pid_max = 4194304
+kernel.threads-max = 4194304
+net.core.somaxconn = 65535
+net.core.netdev_max_backlog = 262144
+net.ipv4.tcp_max_syn_backlog = 262144
+net.ipv4.tcp_timestamps = 0
+net.ipv4.tcp_synack_retries = 5
+net.ipv4.tcp_syn_retries = 5
+net.ipv4.tcp_tw_reuse = 1
+net.ipv4.tcp_tw_recycle = 1
+net.ipv4.tcp_fin_timeout = 10
+net.ipv4.tcp_keepalive_time = 30
+net.ipv4.ip_local_port_range = 1024 65535
+net.ipv4.tcp_rmem = 4096 87380 16777216
+net.ipv4.tcp_wmem = 4096 87380 16777216
+net.ipv4.udp_rmem_min = 16384
+net.ipv4.udp_wmem_min = 16384" >> /etc/sysctl.conf
+sudo sysctl -p
