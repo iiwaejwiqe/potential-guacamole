@@ -43,3 +43,49 @@ sudo sed -i 's/errors=remount-ro 0/errors=remount-ro,noatime 0/g' /etc/fstab
 
 # Zaktualizowanie konfiguracji systemu
 sudo sysctl -p
+
+# Zmiana portu SSH
+sudo sed -i 's/#Port 22/Port 1337/g' /etc/ssh/sshd_config
+
+# Ograniczenie dozwolonych protokołów i metod uwierzytelniania
+sudo echo "Protocol 2
+Ciphers aes128-ctr,aes192-ctr,aes256-ctr
+MACs hmac-sha2-256,hmac-sha2-512
+PermitRootLogin no
+MaxAuthTries 3
+LoginGraceTime 30
+Banner /etc/issue.net
+AllowUsers yourusername
+PasswordAuthentication no
+UsePAM no
+PubkeyAuthentication yes
+AuthorizedKeysFile	.ssh/authorized_keys" >> /etc/ssh/sshd_config
+
+# Zabezpieczenie przed atakami typu brute-force
+sudo apt-get install -y fail2ban
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+sudo sed -i 's/port = ssh/port = 1337/g' /etc/fail2ban/jail.local
+sudo echo "[sshd]
+enabled  = true
+maxretry = 5
+bantime  = 600
+findtime = 600
+action = iptables-multiport[name=sshd, port="1337", protocol=tcp]
+sendmail-whois[name=sshd, dest=hello@local.localhost, sender=fail2ban@yourserver.com]
+" >> /etc/fail2ban/jail.local
+
+# Włączenie i uruchomienie fail2ban
+sudo systemctl enable fail2ban
+sudo systemctl start fail2ban
+
+# Ustawienie reguł dla firewalla i włączenie firewalla
+sudo apt-get install -y ufw
+sudo ufw allow 1337/tcp
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 1337/udp
+sudo ufw allow 80/udp
+sudo ufw allow 443/udp
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw enable
