@@ -41,39 +41,6 @@ sudo sed -i 's/errors=remount-ro 0/errors=remount-ro,noatime 0/g' /etc/fstab
 # Zaktualizowanie konfiguracji systemu
 sudo sysctl -p
 
-# Zmiana portu SSH
-sudo sed -i 's/#Port 22/Port 1337/g' /etc/ssh/sshd_config
-
-# Ograniczenie dozwolonych protokołów i metod uwierzytelniania
-sudo echo "Protocol 2
-Ciphers aes128-ctr,aes192-ctr,aes256-ctr
-MACs hmac-sha2-256,hmac-sha2-512
-PermitRootLogin no
-MaxAuthTries 5
-LoginGraceTime 30
-Banner /etc/issue.net
-AllowUsers yourusername
-PasswordAuthentication no
-UsePAM no
-PubkeyAuthentication yes
-AuthorizedKeysFile	.ssh/authorized_keys" >> /etc/ssh/sshd_config
-
-# Włączenie i uruchomienie fail2ban
-sudo systemctl enable fail2ban
-sudo systemctl start fail2ban
-
-# Ustawienie reguł dla firewalla i włączenie firewalla
-sudo apt-get install -y ufw
-sudo ufw allow 1337/tcp
-sudo ufw allow 80/tcp
-sudo ufw allow 443/tcp
-sudo ufw allow 1337/udp
-sudo ufw allow 80/udp
-sudo ufw allow 443/udp
-sudo ufw default deny incoming
-sudo ufw default allow outgoing
-sudo ufw enable
-
 # Zmiana DNS-ów serwera
 echo "nameserver 1.1.1.1
 nameserver 8.8.8.8" > /etc/resolv.conf
